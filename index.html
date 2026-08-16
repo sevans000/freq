@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Freq Cards">
+<meta name="theme-color" content="#131a20">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="favicon.png" sizes="64x64">
+<title>Frequency Cards</title>
+<style>
+  :root{
+    --panel:#131a20;
+    --bezel:#1e272f;
+    --well:#080b0e;
+    --edge:#2c3841;
+    --readout:#ffb54a;
+    --label:#93a5b2;
+    --live:#4ec9a5;
+    --ghost:#3c4a55;
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --font-read:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  body.night{
+    --panel:#0a0505; --bezel:#150808; --well:#050202; --edge:#3a1512;
+    --readout:#ff4a35; --label:#a33c2f; --live:#ff4a35; --ghost:#4a1a15;
+  }
+  body.day{
+    --panel:#dfe4e8; --bezel:#eef1f3; --well:#fbfcfc; --edge:#b9c3ca;
+    --readout:#12222e; --label:#5c6c78; --live:#0a7a5c; --ghost:#a9b6bf;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--panel);
+    font-family:var(--font-ui);
+    color:var(--label);
+    touch-action:manipulation;
+    -webkit-text-size-adjust:100%;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    transition:background .25s ease;
+  }
+  .frame{max-width:900px;margin:0 auto;padding:14px 14px 40px;}
+
+  /* ---- bezel header ---- */
+  .bezel{
+    background:var(--bezel);
+    border:1px solid var(--edge);
+    border-radius:14px;
+    padding:10px 10px 12px;
+    margin-bottom:14px;
+  }
+  .bezel-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .brand{
+    font-family:var(--font-read);
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--label);opacity:.7;flex:1;white-space:nowrap;overflow:hidden;
+  }
+
+  /* dimmer: the one flourish */
+  .dimmer{display:flex;align-items:center;gap:0;background:var(--well);border:1px solid var(--edge);border-radius:999px;padding:3px;}
+  .dimmer button{
+    font-family:var(--font-read);font-size:10px;letter-spacing:.14em;
+    background:none;border:0;color:var(--ghost);
+    padding:6px 10px;border-radius:999px;cursor:pointer;
+  }
+  .dimmer button[aria-pressed="true"]{background:var(--edge);color:var(--readout);}
+
+  .btn{
+    font-family:var(--font-read);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--well);border:1px solid var(--edge);color:var(--label);
+    padding:8px 12px;border-radius:8px;cursor:pointer;
+  }
+  .btn:active{background:var(--edge);}
+  .btn.on{color:var(--readout);border-color:var(--readout);}
+  .btn:focus-visible,input:focus-visible{outline:2px solid var(--readout);outline-offset:2px;}
+
+  /* ---- group tabs ---- */
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    flex:0 0 auto;font-family:var(--font-read);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--well);border:1px solid var(--edge);color:var(--label);
+    padding:9px 14px;border-radius:8px;cursor:pointer;max-width:200px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .tab[aria-selected="true"]{color:var(--live);border-color:var(--live);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--live) 25%,transparent);}
+
+  /* ---- the stack ---- */
+  .stack{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .well{
+    position:relative;
+    background:var(--well);
+    border:1px solid var(--edge);
+    border-radius:12px;
+    padding:12px 12px 10px;
+    box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent);
+  }
+  .well input{
+    display:block;width:100%;background:none;border:0;padding:0;
+    font-size:16px; /* keeps iOS from zooming on focus */
+  }
+  .ident{
+    font-family:var(--font-read);font-weight:600;
+    font-size:17px!important;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label);
+  }
+  .rule{height:1px;background:var(--edge);margin:9px 0 8px;}
+  .freq{
+    font-family:var(--font-read);font-weight:500;
+    font-size:29px!important;letter-spacing:.02em;
+    color:var(--readout);font-variant-numeric:tabular-nums;
+  }
+  body:not(.day) .freq{text-shadow:0 0 14px color-mix(in srgb,var(--readout) 35%,transparent);}
+  .well input::placeholder{color:var(--ghost);}
+  .kill{
+    position:absolute;top:-7px;right:-7px;width:26px;height:26px;border-radius:50%;
+    background:var(--bezel);border:1px solid var(--edge);color:var(--label);
+    font-size:14px;line-height:1;cursor:pointer;display:none;
+  }
+  body.editing .kill{display:block;}
+
+  .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .edit-panel{display:none;margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center;}
+  body.editing .edit-panel{display:flex;}
+  .gname{
+    flex:1 1 180px;min-width:0;background:var(--well);border:1px solid var(--edge);border-radius:8px;
+    color:var(--label);font-family:var(--font-read);font-size:16px;letter-spacing:.1em;
+    text-transform:uppercase;padding:9px 11px;
+  }
+  .well.live{border-color:var(--readout);box-shadow:0 0 0 1px var(--readout);}
+
+  /* ---- built-in keypad ---- */
+  .keypad{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--bezel);border-top:1px solid var(--edge);
+    padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+    transform:translateY(115%);transition:transform .18s ease-out;
+  }
+  .keypad.up{transform:none;}
+  .kp-inner{max-width:430px;margin:0 auto;}
+  .kp-head{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}
+  .kp-ident{font-family:var(--font-read);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--label);flex:1;overflow:hidden;white-space:nowrap;}
+  .kp-val{font-family:var(--font-read);font-size:22px;color:var(--readout);font-variant-numeric:tabular-nums;}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .key{
+    height:56px;border-radius:10px;cursor:pointer;
+    background:var(--well);border:1px solid var(--edge);color:var(--readout);
+    font-family:var(--font-read);font-size:23px;font-variant-numeric:tabular-nums;
+  }
+  .key:active{background:var(--edge);}
+  .key.util{color:var(--label);font-size:13px;letter-spacing:.12em;text-transform:uppercase;}
+  .key.done{grid-column:1/-1;height:46px;color:var(--live);border-color:var(--live);font-size:13px;letter-spacing:.14em;text-transform:uppercase;}
+  body.kp-open .frame{padding-bottom:400px;}
+
+  .note{font-size:12px;line-height:1.5;margin-top:16px;color:var(--ghost);letter-spacing:.02em;}
+  .empty{grid-column:1/-1;text-align:center;padding:26px 10px;color:var(--ghost);font-size:13px;}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body class="panel">
+<div class="frame">
+
+  <div class="bezel">
+    <div class="bezel-top">
+      <div class="brand" id="brand">Frequency Cards</div>
+      <div class="dimmer" role="group" aria-label="Panel brightness">
+        <button data-dim="day">DAY</button>
+        <button data-dim="panel">DUSK</button>
+        <button data-dim="night">NIGHT</button>
+      </div>
+      <button class="btn" id="editBtn" aria-pressed="false">Edit</button>
+    </div>
+
+    <div class="tabs" id="tabs" role="tablist"></div>
+
+    <div class="edit-panel">
+      <input class="gname" id="gname" placeholder="Group name" autocapitalize="characters" autocorrect="off" spellcheck="false">
+      <button class="btn" id="addGroup">New group</button>
+      <button class="btn" id="delGroup">Delete group</button>
+    </div>
+  </div>
+
+  <div class="stack" id="stack"></div>
+
+  <div class="row">
+    <button class="btn" id="addEntry">Add frequency</button>
+  </div>
+
+  <p class="note" id="note">Tap an ident for the letter keyboard. Tap a frequency for the built-in keypad &mdash; iPadOS will not hold its own number pad open for a web page, so this one is part of the app. Everything saves as you type.</p>
+</div>
+
+<div class="keypad" id="keypad" role="group" aria-label="Frequency keypad" aria-hidden="true">
+  <div class="kp-inner">
+    <div class="kp-head">
+      <span class="kp-ident" id="kpIdent">Frequency</span>
+      <span class="kp-val" id="kpVal">---.--</span>
+    </div>
+    <div class="keys" id="keys"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var KEY = 'freqcards.v1';
+  var mem = null, persists = true;
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ persists = false; return mem; }
+  }
+  function save(){
+    mem = data;
+    try{ localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch(e){
+      if(persists){
+        persists = false;
+        document.getElementById('note').textContent =
+          'This browser is blocking local storage, so entries will clear when the page closes. Save the file to the iPad and open it from there to keep them.';
+      }
+    }
+  }
+
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  function blank(){ return {id:uid(), name:'', freq:''}; }
+  function newGroup(name){
+    return {id:uid(), name:name||'NEW GROUP', entries:[blank(),blank(),blank(),blank(),blank(),blank(),blank(),blank()]};
+  }
+
+  var data = load() || {v:1, dim:'panel', active:0, groups:[newGroup('LUBBOCK')]};
+  if(!data.groups || !data.groups.length){ data.groups = [newGroup('LUBBOCK')]; }
+  if(data.active == null || data.active >= data.groups.length){ data.active = 0; }
+
+  var stack   = document.getElementById('stack');
+  var tabs    = document.getElementById('tabs');
+  var gname   = document.getElementById('gname');
+  var editBtn = document.getElementById('editBtn');
+
+  function group(){ return data.groups[data.active]; }
+
+  function setDim(d){
+    data.dim = d;
+    document.body.classList.remove('day','panel','night');
+    document.body.classList.add(d);
+    [].forEach.call(document.querySelectorAll('.dimmer button'), function(b){
+      b.setAttribute('aria-pressed', b.dataset.dim === d ? 'true' : 'false');
+    });
+    save();
+  }
+
+  function tidyFreq(v){
+    var d = v.replace(/[^0-9]/g,'');
+    if(v.indexOf('.') === -1 && (d.length === 5 || d.length === 6)){
+      return d.slice(0,3) + '.' + d.slice(3);
+    }
+    return v;
+  }
+
+  function drawTabs(){
+    tabs.innerHTML = '';
+    data.groups.forEach(function(g,i){
+      var b = document.createElement('button');
+      b.className = 'tab';
+      b.setAttribute('role','tab');
+      b.setAttribute('aria-selected', i === data.active ? 'true' : 'false');
+      b.textContent = g.name || 'UNNAMED';
+      b.onclick = function(){ data.active = i; save(); draw(); };
+      tabs.appendChild(b);
+    });
+  }
+
+  function draw(){
+    drawTabs();
+    gname.value = group().name;
+    document.getElementById('brand').textContent = 'Frequency Cards';
+    stack.innerHTML = '';
+
+    if(!group().entries.length){
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = 'No frequencies in this group yet. Tap "Add frequency" to start one.';
+      stack.appendChild(e);
+      return;
+    }
+
+    group().entries.forEach(function(en, idx){
+      var w = document.createElement('div');
+      w.className = 'well';
+
+      var ident = document.createElement('input');
+      ident.className = 'ident';
+      ident.type = 'text';
+      ident.value = en.name;
+      ident.placeholder = 'IDENT';
+      ident.setAttribute('autocapitalize','characters');
+      ident.setAttribute('autocorrect','off');
+      ident.setAttribute('spellcheck','false');
+      ident.setAttribute('enterkeyhint','next');
+      ident.setAttribute('aria-label','Airport or facility, card ' + (idx+1));
+      ident.oninput = function(){ en.name = ident.value; save(); };
+      ident.onblur  = function(){ drawTabs(); };
+
+      var rule = document.createElement('div');
+      rule.className = 'rule';
+
+      var freq = document.createElement('input');
+      freq.className = 'freq';
+      freq.type = 'text';
+      /* inputmode=none suppresses the iPad system keyboard. iPadOS will not keep
+         its number pad up for a web field, so the app supplies its own. */
+      freq.setAttribute('inputmode','none');
+      freq.setAttribute('autocorrect','off');
+      freq.setAttribute('spellcheck','false');
+      freq.setAttribute('aria-label','Frequency, card ' + (idx+1));
+      freq.value = en.freq;
+      freq.placeholder = '---.--';
+      freq.onfocus = function(){ openPad(en, freq, w); };
+      freq.oninput = function(){ en.freq = freq.value; save(); syncPad(); };  // hardware keyboard
+      freq.onblur  = function(){ freq.value = en.freq = tidyFreq(freq.value); save(); };
+
+      var kill = document.createElement('button');
+      kill.className = 'kill';
+      kill.innerHTML = '&times;';
+      kill.setAttribute('aria-label','Remove card ' + (idx+1));
+      kill.onclick = function(){
+        group().entries.splice(idx,1); save(); draw();
+      };
+
+      w.appendChild(ident); w.appendChild(rule); w.appendChild(freq); w.appendChild(kill);
+      stack.appendChild(w);
+    });
+  }
+
+  /* ---- built-in keypad ---- */
+  var pad = document.getElementById('keypad');
+  var kpIdent = document.getElementById('kpIdent');
+  var kpVal = document.getElementById('kpVal');
+  var cur = null, curInput = null, curWell = null;
+
+  function syncPad(){
+    if(!cur) return;
+    kpIdent.textContent = cur.name || 'Frequency';
+    kpVal.textContent = cur.freq || '---.--';
+  }
+
+  function openPad(entry, input, well){
+    if(curWell) curWell.classList.remove('live');
+    cur = entry; curInput = input; curWell = well;
+    well.classList.add('live');
+    pad.classList.add('up');
+    pad.setAttribute('aria-hidden','false');
+    document.body.classList.add('kp-open');
+    syncPad();
+    setTimeout(function(){ well.scrollIntoView({block:'center', behavior:'smooth'}); }, 60);
+  }
+
+  function closePad(){
+    if(curInput){
+      curInput.value = cur.freq = tidyFreq(cur.freq); save();
+      curInput.blur();
+    }
+    if(curWell) curWell.classList.remove('live');
+    cur = curInput = curWell = null;
+    pad.classList.remove('up');
+    pad.setAttribute('aria-hidden','true');
+    document.body.classList.remove('kp-open');
+  }
+
+  function press(k){
+    if(!cur) return;
+    if(k === 'back'){ cur.freq = cur.freq.slice(0,-1); }
+    else if(k === 'clear'){ cur.freq = ''; }
+    else if(k === '.'){ if(cur.freq.indexOf('.') === -1 && cur.freq) cur.freq += '.'; }
+    else { if(cur.freq.replace('.','').length < 7) cur.freq += k; }
+    curInput.value = cur.freq;
+    save(); syncPad();
+  }
+
+  (function buildKeys(){
+    var box = document.getElementById('keys');
+    var layout = ['1','2','3','4','5','6','7','8','9','.','0','back'];
+    layout.forEach(function(k){
+      var b = document.createElement('button');
+      b.className = 'key' + (k === 'back' ? ' util' : '');
+      b.textContent = k === 'back' ? '\u232B' : k;
+      b.setAttribute('aria-label', k === 'back' ? 'Backspace' : k === '.' ? 'Decimal point' : k);
+      hook(b, function(){ press(k); });
+      box.appendChild(b);
+    });
+    var done = document.createElement('button');
+    done.className = 'key done';
+    done.textContent = 'Done';
+    hook(done, closePad);
+    box.appendChild(done);
+  })();
+
+  /* Fire on pointerdown and swallow the default, so the field never loses focus
+     mid-entry and blur-formatting does not run between digits. e.detail === 0
+     means the click came from the keyboard, which pointerdown does not cover. */
+  function hook(btn, fn){
+    btn.addEventListener('pointerdown', function(e){ e.preventDefault(); fn(); });
+    btn.addEventListener('click', function(e){ if(e.detail === 0) fn(); });
+  }
+
+  document.addEventListener('click', function(e){
+    if(!cur) return;
+    if(pad.contains(e.target)) return;
+    if(curWell && curWell.contains(e.target)) return;
+    closePad();
+  });
+
+  document.getElementById('addEntry').onclick = function(){
+    group().entries.push(blank()); save(); draw();
+    var all = stack.querySelectorAll('.ident');
+    if(all.length) all[all.length-1].focus();
+  };
+
+  document.getElementById('addGroup').onclick = function(){
+    data.groups.push(newGroup('NEW GROUP'));
+    data.active = data.groups.length - 1;
+    save(); draw(); gname.focus(); gname.select();
+  };
+
+  document.getElementById('delGroup').onclick = function(){
+    if(data.groups.length === 1){
+      data.groups = [newGroup('LUBBOCK')];
+    } else if(!confirm('Delete "' + (group().name || 'this group') + '" and its frequencies?')){
+      return;
+    } else {
+      data.groups.splice(data.active,1);
+    }
+    data.active = 0; save(); draw();
+  };
+
+  gname.oninput = function(){ group().name = gname.value; save(); drawTabs(); };
+
+  editBtn.onclick = function(){
+    var on = document.body.classList.toggle('editing');
+    editBtn.classList.toggle('on', on);
+    editBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    editBtn.textContent = on ? 'Done' : 'Edit';
+  };
+
+  [].forEach.call(document.querySelectorAll('.dimmer button'), function(b){
+    b.onclick = function(){ setDim(b.dataset.dim); };
+  });
+
+  setDim(data.dim || 'panel');
+  draw();
+})();
+
+// Offline cache. Silent if unsupported (it is skipped on file:// too).
+if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
