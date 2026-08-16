@@ -1,0 +1,16 @@
+{
+  "name": "Frequency Cards",
+  "short_name": "Freq Cards",
+  "description": "Kneeboard frequency cards, grouped by airport or route.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#131a20",
+  "theme_color": "#131a20",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
